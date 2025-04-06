@@ -1,0 +1,25 @@
+#!/bin/bash
+source scripts/config.env
+# Prompt user for search query
+echo $ACCESS_TOKEN
+read -p "Enter your search query: " SEARCH_QUERY
+while true; do
+    read -p "Enter an integer: " num
+    if [[ "$num" =~ ^-?[0-9]+$ ]]; then
+        echo "Valid input: $num"
+        break
+    else
+        echo "Invalid input! Please enter an integer."
+    fi
+done
+# URL encode the search query
+ENCODED_QUERY=$(echo "$SEARCH_QUERY" | jq -s -R -r @uri)
+
+
+# Fetch posts from Bluesky API
+RESPONSE=$(curl -s -X GET "https://bsky.social/xrpc/app.bsky.feed.searchPosts?q=${ENCODED_QUERY}&limit=${num}&lang=en" \
+     -H "Authorization: Bearer ${ACCESS_TOKEN}")
+
+# Extract posts and send each one to Kafka
+echo "$RESPONSE" | jq -c --arg query "$ENCODED_QUERY" '.posts[] | {query: $query, text: .record.text, author: .author.displayName,likes: .likeCount,dislikes: .dislikeCount}' | \
+     kafka-console-producer.sh --topic bluesky_search --broker-list localhost:9092

@@ -1,0 +1,14 @@
+source scripts/config.env
+
+echo "$USERNAME"
+
+ACCESS_TOKEN=$(curl -s -X POST "https://bsky.social/xrpc/com.atproto.server.createSession" \
+     -H "Content-Type: application/json" \
+     -d "{\"identifier\":\"$USERNAME\", \"password\":\"$PASSWORD\"}" | jq -r '.accessJwt')
+
+echo "$ACCESS_TOKEN"
+
+# Ensure ACCESS_TOKEN is updated in config.env without duplication
+sed -i '/^ACCESS_TOKEN=/d' scripts/config.env
+echo "ACCESS_TOKEN=\"$ACCESS_TOKEN\"" >> scripts/config.env
+
